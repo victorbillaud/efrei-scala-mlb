@@ -1,24 +1,20 @@
-package dev.zio.quickstart
+package main
 
-import users.InmemoryUserRepo
-import users.PersistentUserRepo
-import users.UserApp
+import games.DatabaseGameRepo
+import games.GameApp
+import games.SeedGameTable
 import zio._
 import zio.http._
 
 object MainApp extends ZIOAppDefault:
   def run: ZIO[Environment with ZIOAppArgs with Scope, Throwable, Any] =
-    val httpApps = UserApp()
+    val httpApps = GameApp()
+    
     Server
       .serve(
         httpApps.withDefaultErrorResponse
       )
       .provide(
         Server.defaultWithPort(4001),
-
-        // An layer responsible for storing the state of the `counterApp`
-        ZLayer.fromZIO(Ref.make(0)),
-
-        // To use the persistence layer, provide the `PersistentUserRepo.layer` layer instead
-        PersistentUserRepo.layer
+        DatabaseGameRepo.layer
       )
