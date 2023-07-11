@@ -24,6 +24,7 @@ lazy val root = (project in file("."))
       "dev.zio" %% "zio-http" % zioHtppVersion,
       "io.getquill"   %% "quill-zio"      % "4.6.0",
       "io.getquill"   %% "quill-jdbc-zio" % "4.6.0",
+      "io.getquill"   %% "quill-cassandra-zio"     % "4.6.0",
       "com.github.tototoshi" %% "scala-csv" % scalaCsvVersion,
     ).map(_ % Compile),
     libraryDependencies ++= Seq(
