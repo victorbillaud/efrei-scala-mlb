@@ -9,6 +9,7 @@ import zio.*
 
 import java.util.UUID
 import javax.sql.DataSource
+import scala.collection.immutable.Stream.Cons
 
 case class GameTable(
     uuid: UUID,
@@ -69,26 +70,40 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
 
   override def seedDatabase: Task[Unit] = {
     for
-      id <- Random.nextUUID
-      _ <- ctx.run {
-        quote {
-          query[GameTable].insertValue {
-            lift(
-              GameTable(
-                id,
-                2021,
-                false,
-                None,
-                "team1",
-                "team2",
-                1,
-                1
+      rows <- CSVManager.readAndPrint("mlb_elo_latest.csv")
+      _ <- Console.printLine(s"Rows: ${rows.length}")
+      _ <- ZIO.foreach(rows) { row =>
+        val id = UUID.randomUUID()
+        val season = row(1).toInt
+        val neutral = row(2).toBoolean
+        val playoff = Option(row(3))
+        val team1 = row(4)
+        val team2 = row(5)
+        val score1 = row(24).toInt
+        val score2 = row(25).toInt
+        println(
+          s"Inserting $id, $season, $neutral, $playoff, $team1, $team2, $score1, $score2"
+        )
+        ctx.run {
+          quote {
+            query[GameTable].insertValue(
+              lift(
+                GameTable(
+                  id,
+                  season,
+                  neutral,
+                  playoff,
+                  team1,
+                  team2,
+                  score1,
+                  score2
+                )
               )
             )
           }
         }
       }
-    yield id.toString()
+    yield ()
   }.provide(ZLayer.succeed(dataSource)).unit
 
   override def create(game: Game): Task[String] = {

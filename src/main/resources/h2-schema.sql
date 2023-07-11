@@ -1,4 +1,4 @@
--- -- Table: Game
+-- Table: Game
 CREATE TABLE IF NOT EXISTS GameTable (
     uuid VARCHAR(50),
     season INT,
