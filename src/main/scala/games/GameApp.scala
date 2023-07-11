@@ -50,12 +50,12 @@ object GameApp {
           }
 
       // POST /seed
-      case Method.POST -> !! / "seed" =>
+      case Method.POST  -> !! / "seed" =>
         GameRepo.seedDatabase
           .map(_ => Response.ok)
           .catchAll { error =>
-            Console.printError(s"Error: ${error.getMessage}") *>
-              ZIO.succeed(Response.status(Status.InternalServerError))
+            Console.printError(s"Error: ${error}") *>
+              ZIO.succeed(Response.text(error.getMessage).withStatus(Status.InternalServerError))
           }
 
     }

@@ -7,6 +7,7 @@ import io.getquill.context.ZioJdbc.DataSourceLayer
 import io.getquill.jdbczio.Quill
 import zio.*
 
+import java.sql.SQLException
 import java.util.UUID
 import javax.sql.DataSource
 import scala.collection.immutable.Stream.Cons
@@ -72,31 +73,34 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
     for
       rows <- CSVManager.readAndPrint("mlb_elo_latest.csv")
       _ <- Console.printLine(s"Rows: ${rows.length}")
-      _ <- ZIO.foreach(rows) { row =>
-        val id = UUID.randomUUID()
-        val season = row(1).toInt
-        val neutral = row(2).toBoolean
+      // Drop table if exists
+      _ <- ctx.run {
+        quote {
+          query[GameTable].delete
+        }
+      }
+      _ <- ZIO.foreach[DataSource, SQLException, List[String], Long, List](rows) { row =>
+        val id: UUID = UUID.randomUUID()
+        val season = row(1).toIntOption
+        val neutral = row(2).toBooleanOption
         val playoff = Option(row(3))
         val team1 = row(4)
         val team2 = row(5)
-        val score1 = row(24).toInt
-        val score2 = row(25).toInt
-        println(
-          s"Inserting $id, $season, $neutral, $playoff, $team1, $team2, $score1, $score2"
-        )
+        val score1 = row(24).toIntOption
+        val score2 = row(25).toIntOption
         ctx.run {
           quote {
             query[GameTable].insertValue(
               lift(
                 GameTable(
                   id,
-                  season,
-                  neutral,
+                  season.getOrElse(0),
+                  neutral.getOrElse(false),
                   playoff,
                   team1,
                   team2,
-                  score1,
-                  score2
+                  score1.getOrElse(0),
+                  score2.getOrElse(0)
                 )
               )
             )
