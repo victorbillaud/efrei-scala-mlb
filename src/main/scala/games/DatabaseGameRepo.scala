@@ -14,11 +14,11 @@ case class GameTable(
     uuid: UUID,
     season: Int,
     neutral: Boolean,
-    playoff: Option[String],
+    playoff: String | Null,
     team1: String,
     team2: String,
-    score1: Int,
-    score2: Int
+    score1: Double,
+    score2: Double
 )
 
 case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
@@ -78,7 +78,7 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
                 id,
                 2021,
                 false,
-                None,
+                null,
                 "team1",
                 "team2",
                 1,

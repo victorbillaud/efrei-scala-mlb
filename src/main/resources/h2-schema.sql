@@ -3,11 +3,11 @@ CREATE TABLE IF NOT EXISTS GameTable (
     uuid VARCHAR(50),
     season INT,
     neutral BOOLEAN,
-    playoff VARCHAR(20),
+    playoff VARCHAR(20) OR NULL,
     team1 VARCHAR(50),
 team2 VARCHAR(50),
-    score1 INT,
-    score2 INT
+    score1 DOUBLE,
+    score2 DOUBLE
 );
 
 -- Table: Team
