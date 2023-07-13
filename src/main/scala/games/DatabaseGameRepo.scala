@@ -6,6 +6,9 @@ import io.getquill.*
 import io.getquill.context.ZioJdbc.DataSourceLayer
 import io.getquill.jdbczio.Quill
 import zio.*
+import zio.stream.ZStream
+
+import com.github.tototoshi.csv._
 
 import java.util.UUID
 import javax.sql.DataSource
@@ -69,27 +72,16 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
 
   override def seedDatabase: Task[Unit] = {
     for
-      id <- Random.nextUUID
-      _ <- ctx.run {
-        quote {
-          query[GameTable].insertValue {
-            lift(
-              GameTable(
-                id,
-                2021,
-                false,
-                null,
-                "team1",
-                "team2",
-                1,
-                1
-              )
-            )
-          }
-        }
-      }
-    yield id.toString()
-  }.provide(ZLayer.succeed(dataSource)).unit
+      reader <- ZIO.succeed(CSVReader.open("mlb_elo_latest.csv"))
+
+      stream <- ZStream
+        .fromIterator[Seq[String]](reader.iterator.drop(1)) // drop the first line
+        .map(createGameObject)
+        .grouped(1000) // group by 1000
+        .foreach(chunk => insertValues(chunk.toList)) // insert into database
+    
+    yield ()
+  }
 
   override def create(game: Game): Task[String] = {
     for
@@ -114,6 +106,42 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
       }
     yield id.toString
   }.provide(ZLayer.succeed(dataSource))
+
+  def insertValues(games: List[Game]): Task[Unit] = {
+    for
+      _ <- ZIO.foreach(games) { game =>
+        ctx.run {
+          quote {
+            query[GameTable].insertValue(
+              lift(
+                GameTable(
+                  UUID.randomUUID(),
+                  game.season,
+                  game.neutral,
+                  game.playoff,
+                  game.team1,
+                  game.team2,
+                  game.score1,
+                  game.score2
+                )
+              )
+            )
+          }
+        }
+      }
+    yield ()
+  }.provide(ZLayer.succeed(dataSource))
+
+  def createGameObject(values: Seq[String]): Game =
+    Game(
+      values(1).toInt, // season
+      values(2) == "1", // neutral
+      values(3), // playoff
+      values(4), // team1
+      values(5), // team2
+      values(6).toDouble, // score1
+      values(7).toDouble // score2
+    )
 
 object DatabaseGameRepo:
   def layer: ZLayer[Any, Throwable, DatabaseGameRepo] =
