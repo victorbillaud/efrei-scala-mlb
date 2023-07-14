@@ -72,7 +72,7 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
 
   override def seedDatabase: Task[Unit] = {
     for
-      reader <- ZIO.succeed(CSVReader.open("mlb_elo_latest.csv"))
+      reader <- ZIO.succeed(CSVReader.open("mlb_elo.csv"))
 
       stream <- ZStream
         .fromIterator[Seq[String]](reader.iterator.drop(1)) // drop the first line
