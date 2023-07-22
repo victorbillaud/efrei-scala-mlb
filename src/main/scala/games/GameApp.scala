@@ -47,8 +47,8 @@ object GameApp {
         GameRepo
           .lookup(id)
           .map {
-            case Some(user) =>
-              Response.json(user.toJson)
+            case Some(game) =>
+              Response.json(game.toJson)
             case None =>
               Response.status(Status.NotFound)
           }

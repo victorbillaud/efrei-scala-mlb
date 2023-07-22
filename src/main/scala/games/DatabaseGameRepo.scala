@@ -30,14 +30,14 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
 
   import ctx._
 
-  override def lookup(id: String): Task[Option[Game]] =
+  override def lookup(id: String): Task[Option[GameOutput]] =
     ctx
       .run {
         quote {
           query[GameTable]
             .filter(p => p.uuid == lift(UUID.fromString(id)))
             .map(u =>
-              Game(
+              GameOutput(
                 u.uuid,
                 u.season,
                 u.neutral,
@@ -53,7 +53,7 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
       .provide(ZLayer.succeed(dataSource))
       .map(_.headOption)
 
-  override def games(limit: Int, offset: Int): Task[List[Game]] =
+  override def games(limit: Int, offset: Int): Task[List[GameOutput]] =
   ctx
     .run {
       quote {
@@ -61,7 +61,7 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
           .drop(lift(offset))
           .take(lift(limit))
           .map(u =>
-            Game(
+            GameOutput(
               u.uuid,
               u.season,
               u.neutral,
@@ -140,7 +140,6 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
 
   def createGameObject(values: Seq[String]): Game =
     Game(
-      UUID.randomUUID(), // uuid
       values(1).toInt, // season
       values(2) == "1", // neutral
       values(3), // playoff

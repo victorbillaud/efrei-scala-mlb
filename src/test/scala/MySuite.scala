@@ -6,6 +6,8 @@ import zio.ZIO
 import zio.http.*
 import zio.json.*
 
+import java.util.UUID
+
 
 class MainAppTest extends munit.ZSuite {
   val app: App[games.GameRepo] = games.GameApp().withDefaultErrorResponse
@@ -24,7 +26,6 @@ class MainAppTest extends munit.ZSuite {
   // Try to create a game
   testZ("POST /games creates a game") {
     val game = Game(
-      uuid = java.util.UUID.randomUUID(),
       season = 2021,
       neutral = false,
       playoff = "N",
@@ -44,9 +45,56 @@ class MainAppTest extends munit.ZSuite {
         .runZIO(request)
         .provideLayer(DatabaseGameRepo.layer)
         .map(response => {
-          response.status
+          response
         })
-        .map(_ == Status.Ok)
+        .map(response => {
+          response.status == Status.Ok
+        }),
+      "The game was not created"
+    )
+  }
+
+  // Try to create a game with a bad body
+  testZ("POST /games returns a bad request when the body is bad") {
+    val request = Request
+      .post(
+        Body.fromString("bad body"),
+        URL(!! / "games")
+      )
+
+    assertZ(
+      app
+        .runZIO(request)
+        .provideLayer(DatabaseGameRepo.layer)
+        .map(response => {
+          response
+        })
+        .map(response => {
+          response.status == Status.BadRequest
+        }),
+      "The game was not created"
+    )
+  }
+
+  // Try to seed the database
+  testZ("POST /seed seeds the database") {
+    val request = Request
+      .post(
+        Body.fromString(""),
+        URL(!! / "seed")
+      )
+
+    assertZ(
+      app
+        .runZIO(request)
+        .provideLayer(DatabaseGameRepo.layer)
+        .map(response => {
+          response
+        })
+        .map(response => {
+          response.status == Status.Ok
+        }),
+      "The database was not seeded"
     )
   }
 }
