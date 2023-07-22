@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS GameTable (
     playoff VARCHAR(20),
     team1 VARCHAR(50),
 team2 VARCHAR(50),
-    score1 INT,
-    score2 INT
+    score1 DOUBLE,
+    score2 DOUBLE
 );
 
 -- Table: Team

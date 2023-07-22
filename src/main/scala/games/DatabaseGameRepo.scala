@@ -1,11 +1,13 @@
 package games
 
+import com.github.tototoshi.csv._
 import io.getquill.Escape
 import io.getquill.H2ZioJdbcContext
 import io.getquill.*
 import io.getquill.context.ZioJdbc.DataSourceLayer
 import io.getquill.jdbczio.Quill
 import zio.*
+import zio.stream.ZStream
 
 import java.sql.SQLException
 import java.util.UUID
@@ -16,11 +18,11 @@ case class GameTable(
     uuid: UUID,
     season: Int,
     neutral: Boolean,
-    playoff: Option[String],
+    playoff: String | Null,
     team1: String,
     team2: String,
-    score1: Int,
-    score2: Int
+    score1: Double,
+    score2: Double
 )
 
 case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
@@ -71,44 +73,16 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
 
   override def seedDatabase: Task[Unit] = {
     for
-      rows <- CSVManager.readAndPrint("mlb_elo_latest.csv")
-      _ <- Console.printLine(s"Rows: ${rows.length}")
-      // Drop table if exists
-      _ <- ctx.run {
-        quote {
-          query[GameTable].delete
-        }
-      }
-      _ <- ZIO.foreach[DataSource, SQLException, List[String], Long, List](rows) { row =>
-        val id: UUID = UUID.randomUUID()
-        val season = row(1).toIntOption
-        val neutral = row(2).toBooleanOption
-        val playoff = Option(row(3))
-        val team1 = row(4)
-        val team2 = row(5)
-        val score1 = row(24).toIntOption
-        val score2 = row(25).toIntOption
-        ctx.run {
-          quote {
-            query[GameTable].insertValue(
-              lift(
-                GameTable(
-                  id,
-                  season.getOrElse(0),
-                  neutral.getOrElse(false),
-                  playoff,
-                  team1,
-                  team2,
-                  score1.getOrElse(0),
-                  score2.getOrElse(0)
-                )
-              )
-            )
-          }
-        }
-      }
+      reader <- ZIO.succeed(CSVReader.open("mlb_elo.csv"))
+      stream <- ZStream
+        .fromIterator[Seq[String]](
+          reader.iterator.drop(1)
+        ) // drop the first line
+        .map(createGameObject)
+        .grouped(1000) // group by 1000
+        .foreach(chunk => insertValues(chunk.toList)) // insert into database
     yield ()
-  }.provide(ZLayer.succeed(dataSource)).unit
+  }
 
   override def create(game: Game): Task[String] = {
     for
@@ -133,6 +107,41 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
       }
     yield id.toString
   }.provide(ZLayer.succeed(dataSource))
+
+  def insertValues(games: List[Game]): Task[Unit] = {
+    for _ <- ZIO.foreach(games) { game =>
+        ctx.run {
+          quote {
+            query[GameTable].insertValue(
+              lift(
+                GameTable(
+                  UUID.randomUUID(),
+                  game.season,
+                  game.neutral,
+                  game.playoff,
+                  game.team1,
+                  game.team2,
+                  game.score1,
+                  game.score2
+                )
+              )
+            )
+          }
+        }
+      }
+    yield ()
+  }.provide(ZLayer.succeed(dataSource))
+
+  def createGameObject(values: Seq[String]): Game =
+    Game(
+      values(1).toInt, // season
+      values(2) == "1", // neutral
+      values(3), // playoff
+      values(4), // team1
+      values(5), // team2
+      values(6).toDouble, // score1
+      values(7).toDouble // score2
+    )
 
 object DatabaseGameRepo:
   def layer: ZLayer[Any, Throwable, DatabaseGameRepo] =
