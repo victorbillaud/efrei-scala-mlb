@@ -11,9 +11,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "mlb-api",
     version := "1.0",
-
     scalaVersion := scalaVer,
-
     libraryDependencies ++= Seq(
       "com.h2database" % "h2" % h2Version,
       "dev.zio" %% "zio" % zioVersion,
@@ -22,12 +20,13 @@ lazy val root = (project in file("."))
       "dev.zio" %% "zio-jdbc" % zioJdbcVersion,
       "dev.zio" %% "zio-json" % zioJsonVersion,
       "dev.zio" %% "zio-http" % zioHtppVersion,
-      "io.getquill"   %% "quill-zio"      % "4.6.0",
-      "io.getquill"   %% "quill-jdbc-zio" % "4.6.0",
-      "io.getquill"   %% "quill-cassandra-zio"     % "4.6.0",
-      "com.github.tototoshi" %% "scala-csv" % scalaCsvVersion,
+      "io.getquill" %% "quill-zio" % "4.6.0",
+      "io.getquill" %% "quill-jdbc-zio" % "4.6.0",
+      "io.getquill" %% "quill-cassandra-zio" % "4.6.0",
+      "com.github.tototoshi" %% "scala-csv" % scalaCsvVersion
     ).map(_ % Compile),
     libraryDependencies ++= Seq(
-      "org.scalameta" %% "munit" % "0.7.29"
+      "org.scalameta" %% "munit" % "0.7.29",
+      "com.github.poslegm" %% "munit-zio" % "0.1.1"
     ).map(_ % Test)
   )
