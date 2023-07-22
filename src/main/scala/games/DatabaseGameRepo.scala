@@ -38,6 +38,7 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
             .filter(p => p.uuid == lift(UUID.fromString(id)))
             .map(u =>
               Game(
+                u.uuid,
                 u.season,
                 u.neutral,
                 u.playoff,
@@ -52,12 +53,16 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
       .provide(ZLayer.succeed(dataSource))
       .map(_.headOption)
 
-  override def games: Task[List[Game]] =
-    ctx
-      .run {
-        quote {
-          query[GameTable].map(u =>
+  override def games(limit: Int, offset: Int): Task[List[Game]] =
+  ctx
+    .run {
+      quote {
+        query[GameTable]
+          .drop(lift(offset))
+          .take(lift(limit))
+          .map(u =>
             Game(
+              u.uuid,
               u.season,
               u.neutral,
               u.playoff,
@@ -67,9 +72,10 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
               u.score2
             )
           )
-        }
       }
-      .provide(ZLayer.succeed(dataSource))
+    }
+    .provide(ZLayer.succeed(dataSource))
+
 
   override def seedDatabase: Task[Unit] = {
     for
@@ -134,6 +140,7 @@ case class DatabaseGameRepo(dataSource: DataSource) extends GameRepo:
 
   def createGameObject(values: Seq[String]): Game =
     Game(
+      UUID.randomUUID(), // uuid
       values(1).toInt, // season
       values(2) == "1", // neutral
       values(3), // playoff

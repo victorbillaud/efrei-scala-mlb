@@ -5,6 +5,7 @@ import zio.json.*
 import java.util.UUID
 
 case class Game(
+  uuid: UUID,
   season: Int,
   neutral: Boolean,
   playoff: String | Null,
